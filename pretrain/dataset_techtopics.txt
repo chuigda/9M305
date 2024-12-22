@@ -1,0 +1,132 @@
+等我把剩下这一点管线打通，然后应该就可以让队友加入了
+目前大致能做到的程度就是这样
+你打算把 JVM 的实现部分钩出来用么
+此外我还想到了一个比较邪门的办法
+用了 AI 它只会跟我胡说八道
+看起来我作弊拿到的 jclass 只要出了原先 JNI 的范畴就会被六亲不认
+总之我先作弊拿一个 jclass，先完成后续部分试验
+我们只是研究合作
+既然如此，我要是自己去加载应用加载器的话，会怎么样
+大致意思是因为你这 env 不是正经搞来的，上面没有 JNI 的 native frame，他只给你用系统加载器
+但这里有两个问题，一是我要怎么让 native 知道这么个事，二是我要怎么解决 JNIEnv* 的问题
+简单来说目前我能假装自己是 JNI 去调用 register 函数把函数签名和函数指针都抽上来
+让我想想怎么实现这个玩意
+JS 跟普通语言比算是差的，但是跟 lua 一比算好的，但主要 qjs 之前一直没个适合嵌入的版本，V8 毕竟还是太重了
+至于 Python, 要用 CPython 那个 API 你鲨了开发人员算了
+不玩玩本土生态的 Nashorn 或者 GraalJS 么
+qjs 的 API 还是很好用的，特别是不含 struct 对 FFI 非常友好
+直接用 varargs 的 API 还是比较少见的吧，根据我观测
+C艹 那个 varargs 倒是有不少用的但那完全不是一个物种了就
+qjs 应该是最不受影响的部分，这里可以先开工
+你最好还是逐模块调试通了再组装，不然整合阶段出了问题你都不知道是谁出的
+这项目上花费的人月数肯定会稳压竞品一头，导致你所运营的资本主义公司因为无法利用剩余价值实现再生产而被迫执行破产清算
+我们不能容忍这样的隐式行为
+这个损失可能主要来自 bound check
+应该有 getUnchecked 然后给 reinterpret/withTargetLayout 同款的 native access warning
+我手头还有一些些微增加开销的预制 Buffer 类型不过等 valhalla 出来应该就能零开销了
+MemorySegment 应该已经上 jdk.internal.ValueBased 了吧
+有一些应该是已经有替代了的，应该 remove
+其他的……我没用过 sun.misc.Unsafe 的东西所以也不认识
+So this is becuz of a combination of tedious CPU behaviour and should not be relied on
+但是被 RegisterNatives 的函数前两个参数得是 JNIEnv *env, jclass cls
+想直接扔未经改造的 libm sin 之类的东西进去是不太现实的
+总的来说按这个方向研发的话，我们大致能得到一个在 FFM 加持之下把未经专门处理的函数自动送进 native method 的东西；这玩意有没有用就另说了
+首先 FFM 可以帮你抹掉前两个你不需要的参数
+而且这玩意可能有一些作用域之类的机制，我尝试把这里面拿到的 jclass 偷渡出去作弊，拿偷渡出去的 jclass 调用 RegisterNatives 是得不到正确结果的
+包括甚至说跟着 JNI 进来这个 jclass 和后续自己 find 到的 jclass 也不是一个 address
+不完全是，每次调用 FindClass 其实都会有不同的结果
+所以大致看来这玩意不带个 native shared object 是搞不定了
+但是因为这个 Env 不是 JNI call 创建出来的，JVM 不让你用应用类加载器，env->FindClass 只能抓取到 java.util.HashMap 这种类
+如果作弊从别的地方搞一个 jclass 塞过去它也不认
+比起生成器，你要的那个东西正在路上
+我们要保障用户在 registerNatives 函数里调用 registerNative/unregisterNative/getClass 之外其他函数的权利吗
+然后你是要拿到 register 的函数自己 call，还是设法让它仍然经过原先 JNI 的机制
+你要从用 FFM 调用这个 JNI 的这个 registerNatives 方法对吧
+Windows 上想要真透明通道只能上游戏捕捉去抓 3D surface 上的 framebuffer
+OBS 能抓但不管 Bitblt 还是 Windows capture 都没有透明通道，这是 Win 的问题，人家 X11 就有
+好了，这样就没有选择 C# 的必要了
+对 package-info.java 或者 module-info.java 使用这个注解，IDE 就会默认所有字段为 @NotNull，除非单独指定
+好了 我找到了一个在 Java 这边实现简易 null-safety 的办法
+C# 本身倒是很节约堆内存
+Avalonia 怎么刚启动就吃这么多非托管内存
+我们有无敌的 UnmanagedCallersOnly
+C# 这边的 benefit 主要是 FFI 要好很多
+然后 C# 的 AOT 有一堆问题，比如 C# 的 reflection 不能在 AOT 里用，然后 C# 标准库刚好又一堆 reflection，然后你编译的时候又不知道什么是能用的
+不用了，bundle 这么多 dependency 谁受得了
+感觉还行，但是 Vulkan Memory Allocator 需要我自己绑
+应该不会有区别，如果你用的是不带 ES 的 Desktop GL，它实际获取的 context 总是你硬件提供的最新版本的 GL context，并且总是能按最高版本的 GLSL 给你编译
+怎么没绑 VMA，而且三年了这事都没干完
+VMA 生态爆炸不要紧，还可以把它重新修复
+忘了 Windows CMake 是 sb 了
+GNU make 怎么你了
+Linux 上构建的话建议总是启用以免遇到申必问题
+我应该改用 C# 来增加更多语法糖，减少 FFI 噪音并吸引更多人参与开发吗
+不用你教我怎么写代码
+唉真是越来越像一个成熟的老保了，你们会接受这样的我吗
+好吧，我现在觉得扁平化是错误的选择
+是否应该让 RenderTask 以更原始的形式被提交，并且让 RenderTask 做成内部可变的
+好了，进入到了我不熟悉的图论算法环节
+你还是在优化算法和优化性能之间选择了开挂
+总的来说现在 GUI 和逻辑终于不用挤一个事件循环了
+比如上传顶点缓冲就能吃到 Vulkan 的专用上传队列的加成
+渲染任务总是可以在其他线程提交的，并且如果目标后端支持多线程特性它就会用
+我认为我的 abstraction 是非常合理的，而且默认情况下即支持多线程
+还是把精力放在优化脚本控制和手动控制上吧
+JavaScript 是世界上最好玩的语言
+连 Qt 的效果都做不到的（通用型） UI 框架全是玩具
+好，这样就是正确的法线+锐边+逐顶点颜色了
+一想到我用的 crate 里充满了对这种傻逼平台的迁就我就气不打一处来
+这个傻逼 dependency 在我上游的上游的上游的上游，mlgbz 我要移除它得先开 PR 往上游的上游的上游里加 feature
+傻逼平台，滚，以后我写库必处处阻碍 wasm 移植
+wasm 小鬼就像老鼠，除了多还是多
+我是不是应该找个 Shader visualizer & debugger 之类的
+需求是要能支持 GLSL，连线，显示中间过程里的 framebuffer
+renderdoc 不是干这个的
+但反正比你 geometry shader 便宜，而且你不在锐边上的顶点还是可以共享的，这部分顶点可以正常吃到 index buffer 的 buf
+你不合并被两个有棱角的面共享的顶点就行了
+你两个不共用法线的顶点就是尿不到一个壶里，生成俩独立顶点再 index 就完事
+锐边只是告诉 blender 不要在两个面之间平滑法线而已
+比如我这有俩四边面，我平滑着色一开，法线一被插值，你就看不到中间这条线了；看起来很光滑，但其实一看侧面就露馅了
+该研究 glTF 加载了，目前这个形式并不能满足我的需求，obj 的局限性越来越明显了
+你确定你加的是虚拟机选项，不是程序实参
+你加的那个是程序实参
+这个 MemorySegment 不一定是 native 的，不要直接将其应用于 FFI
+我不是一直在用 Java 操纵 Vulkan 么，你到底怎么看的群消息，看一半扔一半
+OpenGL 这边没有 pipeline 的概念，这种东西都是全局状态
+你可以把整个 PipelineCreateInfo 存起来，后 RenderTask 绑定到这个“pipeline”的时候你现场设置
+预先分配一部分 Vk 结构的话也可以压榨出一点 performance 来
+目前来说我没遇到，但我看有些地方的说法可能得加 volatile，不是很懂
+信号量操作会帮我们解决内存可见性之类的问题，synchronized 也会自动插入内存屏障，所以这里不需要额外的 volatile
+我没见到 JVM 里有同类产品，然后外面的 oneshot 好像都要带很大的库，所以就自己弄了一个
+如果你觉得一个文件里塞的代码太多了就用我的土法 partial class
+因为我们假定 create 系列函数是会在渲染线程外被调用的
+你在 create 系列函数里不真的创建对象，而是把创建信息和一个 Oneshot sender 塞到一个 pending jobs set 里面
+你得有一个 server 才能加载“多个”文件
+没事你很快会了解到 GLES2 这边也是一堆 GLuint 和 void*，记一个东西是什么主要还是靠变量名
+但你得先把它变成四维向量，它才能和 4x4 矩阵相乘
+原来这玩意是内置了的，我当初怎么找不到这玩意
+错误处理机制只能设计成 opt-out 的，不能设计成 opt-in 的
+然后我得实现一套系统没有独立传输队列时的资源上传
+然后我们就可以开始研究其他线程创建多个 pipeline 并发送给渲染线程了
+我没 render pass 所以应该会简单很多
+好了，基本流程跑通了，接下来先把交换链重建加上
+JVM 你是真他妈牛逼，这都能抓取到
+现在你知道谁的 annotation 和 proc macro 最先进了
+我劝你们今后把三教合一，也写 native，也写 JVM/dotnet，也用脚本语言
+所以 C# 创始人，An什么来着H什么jl什么来着，基于这一点判断 C# 不需要 CE，纯傻逼，敌人都笑了
+也就是说这个函数可能在它的调用者毫不知情的情况下抛出异常，而不是强制调用者处理这个异常
+你觉得用户要不要处理 JSON parse failure，那当然他妈的要处理了，又不是人人都是 JavaScript kiddies
+自从没了 render pass 和 framebuffer 思路就清晰多了
+这里的思路是让 Vulkan 来分配内存，导出给 OpenGL，然后 OpenGL 就可以在这上面搞 RTT
+现在需要用 memory barrier 手动转换图像布局，但反正这比 subpass dependency 阳间多了
+RenderPass & Framebuffer 滚蛋喵，拜拜喵，切割旧版 API 喵，切割喵
+里面装的还是字符串，用的时候你还得自己查文档
+代码跑通了但是资源有点侧漏
+我在考虑加一个当对话角色是老莫的时候允许他查看其他角色人设卡并且删除其他角色的功能
+某种程度上来说 .chr 文件也算是有些作用了
+有 JavaScript Kiddies 会尝试什么都放到浏览器上
+这玩意拿来写通用应用就得受制于 wasm 既要照顾 native 又要照顾 browser 的特点最后两头不讨好
+这样写应该好
+我觉得国内程序员不应该没见过换底公式，但老外就不好说了
+你有这么高速运转的 API 进入 Java，记住我给出的原理！小的时候
+copilot 给我补的什么 jb，这么个小弯都转不过来
